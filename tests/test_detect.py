@@ -399,3 +399,22 @@ def test_the_open_conversation_needs_no_rendered_row():
     ])
     assert detect.current_thread_title(snap) == "Hello"
     assert "Hello" not in detect.sidebar_titles(snap)
+
+
+def test_the_rename_button_is_the_only_authority_on_what_is_open():
+    """A read must be able to tell which conversation it is looking at. Two
+    transcripts are structurally identical - same 'Chat messages' group, same
+    'Message N' children - so only the rename button distinguishes them. Without
+    checking it, a prompt sent to one chat can be answered out of another's
+    transcript, which is how it actually failed."""
+    other = build([
+        (0, "WindowControl", "Claude"),
+        (1, G, "Primary pane"),
+        (2, B, "Someone else's chat, rename session"),
+        (2, G, "Chat messages"),
+        (3, G, "Message 9"),
+        (4, T, "Claude responded: an answer to a different question"),
+    ])
+    assert detect.current_thread_title(other) == "Someone else's chat"
+    # Its ordinals look perfectly valid on their own - which is the trap.
+    assert detect.last_answer_number(other) == 9

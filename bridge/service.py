@@ -96,8 +96,14 @@ class Worker:
         last_partial = ""
 
         while time.time() < deadline:
-            def on_tick(snap: Snapshot, _self=self) -> None:
+            def on_tick(snap: Snapshot) -> None:
                 nonlocal last_partial
+                # Only mirror text from the conversation this job belongs to.
+                # The app drifts, and streaming another chat's reply into this
+                # job's bubble would be a lie the user has no way to spot.
+                shown = core.current_thread_title(snap)
+                if shown is None or shown.strip().casefold() != thread.strip().casefold():
+                    return
                 text = core.partial_answer(snap)
                 if text and text != last_partial:
                     last_partial = text

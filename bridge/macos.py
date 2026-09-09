@@ -357,6 +357,9 @@ class SendMark:
     previous turn's.
     """
 
+    #: The conversation this prompt was sent to. Carried so the answer can be
+    #: proved to have come from the same one - see read_answer.
+    thread: str
     #: Highest message ordinal anywhere in the transcript.
     highest: int
     #: Ordinal of the last message from Claude; None if there was none.
@@ -623,9 +626,10 @@ class Driver:
         time.sleep(0.15)
         mac_ax.key(mac_ax.KEY_RETURN)
 
-    def mark(self, snap: Optional[Snapshot] = None) -> SendMark:
+    def mark(self, thread_title: str, snap: Optional[Snapshot] = None) -> SendMark:
         snap = snap or self.fresh()
-        return SendMark(highest=core.highest_message_number(snap),
+        return SendMark(thread=thread_title,
+                        highest=core.highest_message_number(snap),
                         last_answer=core.last_answer_number(snap))
 
     def _still_on(self, thread_title: str) -> None:
@@ -655,7 +659,7 @@ class Driver:
             raise SendFailed("Refusing to send an empty prompt.")
 
         snap = self.require_thread(thread_title)
-        mark = self.mark(snap)
+        mark = self.mark(thread_title, snap)
 
         problems: list[str] = []
         for place, described in ((self._set_composer, "setting the box's value"),
@@ -758,7 +762,7 @@ class Driver:
         """
         limit = float(timeout if timeout is not None else 20.0)
         deadline = time.time() + limit
-        snap = self.fresh()
+        snap = self._snapshot_of(after.thread) if after is not None else self.fresh()
         group = core.last_answer_group(snap)
 
         while after is not None:
@@ -777,7 +781,7 @@ class Driver:
                     "as this one."
                 )
             time.sleep(self.poll)
-            snap = self.fresh()
+            snap = self._snapshot_of(after.thread)
             group = core.last_answer_group(snap)
 
         if group is None:
@@ -798,6 +802,26 @@ class Driver:
             "Claude's last message read as empty, both from its Copy button and by "
             "stitching the transcript text."
         )
+
+    def _snapshot_of(self, thread_title: str) -> Snapshot:
+        """A snapshot taken while `thread_title` is the conversation on screen.
+
+        Checked on every read, not just before typing. The app drifts on its own
+        - another session going active pulls the window to it - and everything
+        downstream reads whatever is displayed. Without this the answer to one
+        job is read out of a different conversation's transcript and returned as
+        if it were the reply, which is exactly how it failed in testing: a
+        prompt sent to one chat came back with an unrelated message from
+        another. Ordinal checks cannot catch that, because the other transcript
+        has its own, higher ordinals.
+        """
+        snap = self.fresh()
+        shown = core.current_thread_title(snap)
+        if shown is not None and shown.strip().casefold() == thread_title.strip().casefold():
+            return snap
+        # Drifted. Pull it back rather than failing: the answer is sitting in
+        # the right conversation, just not the visible one.
+        return self.open_thread(thread_title, snap=snap)
 
     def _copy_answer(self, group: Node) -> str:
         """Invoke a message's Copy button and read the clipboard, or "" ."""
