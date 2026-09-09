@@ -1,0 +1,2 @@
+# Tree dumps land here (`bridge.inspect --save`).
+# They contain whatever was on screen, so they are gitignored.

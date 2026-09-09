@@ -1,0 +1,12 @@
+# Runtime state: job files and tree dumps contain whatever was on screen in
+# Claude Desktop — prompts, answers, file paths. Never publish these.
+bridge/data/
+bridge/captures/*
+!bridge/captures/.gitkeep
+bridge/config.json
+
+.venv*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store

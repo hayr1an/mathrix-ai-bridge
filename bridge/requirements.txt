@@ -1,0 +1,12 @@
+# The macOS accessibility driver.
+pyobjc-core>=10.3
+pyobjc-framework-Cocoa>=10.3
+pyobjc-framework-ApplicationServices>=10.3
+pyobjc-framework-Quartz>=10.3
+
+# The local JSON API the website proxies to.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+
+# Tests for the pure layer (no Mac needed).
+pytest>=8.0
